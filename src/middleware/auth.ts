@@ -1,6 +1,8 @@
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 
+export const getJwtSecret = (): string | undefined => process.env.JWT_SECRET;
+
 export interface AuthRequest extends Request {
   user?: {
     id: string;
@@ -17,11 +19,15 @@ export const authenticate = (
   if (!token)
     return res.status(401).json({ error: "Unauthorized: No token provided" });
 
+  const jwtSecret = getJwtSecret();
+  if (!jwtSecret) {
+    return res
+      .status(500)
+      .json({ error: "Server misconfigured: JWT secret is not set" });
+  }
+
   try {
-    const decoded = jwt.verify(
-      token,
-      process.env.JWT_SECRET || "secret",
-    ) as any;
+    const decoded = jwt.verify(token, jwtSecret) as any;
     req.user = decoded;
     next();
   } catch (err) {

@@ -6,13 +6,32 @@ import { dbrun, dbget, dball } from "../db";
 
 const router = Router();
 
-const recordSchema = z.object({
-  amount: z.number().positive(),
-  type: z.enum(["INCOME", "EXPENSE"]),
-  category: z.string().min(1),
-  date: z.string().datetime(),
-  notes: z.string().optional(),
-});
+const recordSchema = z
+  .object({
+    amount: z.number().positive(),
+    type: z.enum(["INCOME", "EXPENSE"]),
+    category: z.string().min(1),
+    date: z.string().datetime(),
+    notes: z.string().max(1000).optional(),
+  })
+  .strict();
+
+const listRecordsQuerySchema = z
+  .object({
+    type: z.enum(["INCOME", "EXPENSE"]).optional(),
+    category: z.string().min(1).optional(),
+    startDate: z.string().datetime().optional(),
+    endDate: z.string().datetime().optional(),
+  })
+  .strict();
+
+const getQueryValue = (value: unknown): string | undefined => {
+  if (typeof value === "string") {
+    return value;
+  }
+
+  return undefined;
+};
 
 const isAuthorized = authorize(["ANALYST", "ADMIN"]);
 const canManage = authorize(["ADMIN"]);
@@ -23,7 +42,18 @@ router.get(
   authenticate,
   isAuthorized,
   async (req: AuthRequest, res: Response) => {
-    const { type, category, startDate, endDate } = req.query;
+    const result = listRecordsQuerySchema.safeParse({
+      type: getQueryValue(req.query.type),
+      category: getQueryValue(req.query.category),
+      startDate: getQueryValue(req.query.startDate),
+      endDate: getQueryValue(req.query.endDate),
+    });
+
+    if (!result.success) {
+      return res.status(400).json({ errors: result.error.errors });
+    }
+
+    const { type, category, startDate, endDate } = result.data;
 
     let query = "SELECT * FROM records WHERE 1=1";
     const params: any[] = [];

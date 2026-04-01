@@ -4,7 +4,7 @@ import bcrypt from "bcrypt";
 import { v4 as uuidv4 } from "uuid";
 import jwt from "jsonwebtoken";
 import { dbrun, dbget, dball } from "../db";
-import { authenticate, authorize } from "../middleware/auth";
+import { authenticate, authorize, getJwtSecret } from "../middleware/auth";
 
 const router = Router();
 
@@ -38,11 +38,16 @@ router.post("/login", async (req: Request, res: Response) => {
   const isValid = await bcrypt.compare(password, user.password);
   if (!isValid) return res.status(401).json({ error: "Invalid credentials" });
 
-  const token = jwt.sign(
-    { id: user.id, role: user.role },
-    process.env.JWT_SECRET || "secret",
-    { expiresIn: "1d" },
-  );
+  const jwtSecret = getJwtSecret();
+  if (!jwtSecret) {
+    return res
+      .status(500)
+      .json({ error: "Server misconfigured: JWT secret is not set" });
+  }
+
+  const token = jwt.sign({ id: user.id, role: user.role }, jwtSecret, {
+    expiresIn: "1d",
+  });
 
   res.json({
     token,

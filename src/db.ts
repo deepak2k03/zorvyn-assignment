@@ -1,9 +1,10 @@
 import sqlite3 from "sqlite3";
-import { promisify } from "util";
 import path from "path";
+import bcrypt from "bcrypt";
+import { v4 as uuidv4 } from "uuid";
 
-// Use an in-memory or persisted database
-const dbPath = path.resolve(__dirname, "../database.sqlite");
+// Keep the database file anchored at the project root so it works in both dev and build output.
+const dbPath = path.resolve(process.cwd(), "database.sqlite");
 const db = new sqlite3.Database(dbPath);
 
 export const dbrun = (sql: string, params: any[] = []): Promise<void> => {
@@ -34,6 +35,8 @@ export const dball = (sql: string, params: any[] = []): Promise<any[]> => {
 };
 
 export const initDb = async () => {
+  await dbrun("PRAGMA foreign_keys = ON");
+
   await dbrun(`
     CREATE TABLE IF NOT EXISTS users (
       id TEXT PRIMARY KEY,
@@ -64,8 +67,6 @@ export const initDb = async () => {
     "admin@finance.com",
   ]);
   if (!admin) {
-    const bcrypt = require("bcryptjs");
-    const { v4: uuidv4 } = require("uuid");
     const hash = await bcrypt.hash("admin123", 10);
     await dbrun(
       `INSERT INTO users (id, email, password, role) VALUES (?, ?, ?, ?)`,
