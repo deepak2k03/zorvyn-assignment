@@ -1,0 +1,158 @@
+### API Testing for Finance Dashboard
+
+@baseUrl = http://localhost:3000
+# Replace your token here manually by following the steps below
+@authToken = your_token_here
+
+### 1. Login as Default Admin
+# Expected: Returns a token and user details. Copy the token and paste it in @authToken above.
+POST {{baseUrl}}/users/login
+Content-Type: application/json
+
+{
+  "email": "admin@finance.com",
+  "password": "admin123"
+}
+
+### ----------------------------------------------------
+### 2. User & Role Management (Admin Only)
+### ----------------------------------------------------
+
+### Create a new user (Analyst)
+POST {{baseUrl}}/users
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "email": "analyst2@finance.com",
+  "password": "password123",
+  "role": "ANALYST"
+}
+
+### Get all users
+GET {{baseUrl}}/users
+Authorization: Bearer {{authToken}}
+
+### Update User Role & Status (Admin Only)
+# Note: Replace <USER_ID> with an ID from the GET /users response
+PATCH {{baseUrl}}/users/<USER_ID>
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "role": "VIEWER",
+  "status": "INACTIVE"
+}
+
+### Delete a User (Admin Only)
+# Note: Replace <USER_ID> with an ID from the GET /users response
+DELETE {{baseUrl}}/users/<USER_ID>
+Authorization: Bearer {{authToken}}
+
+### ----------------------------------------------------
+### 3. Financial Records Management
+### ----------------------------------------------------
+
+### Create a new Income Record (Admin)
+POST {{baseUrl}}/records
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "amount": 5000,
+  "type": "INCOME",
+  "category": "Salary",
+  "date": "2026-04-01T10:00:00Z",
+  "notes": "April Salary"
+}
+
+### Create a new Expense Record (Admin)
+POST {{baseUrl}}/records
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "amount": 200,
+  "type": "EXPENSE",
+  "category": "Software",
+  "date": "2026-04-02T10:00:00Z",
+  "notes": "Github Copilot Subscription"
+}
+
+### List All Records (Admin / Analyst)
+GET {{baseUrl}}/records
+Authorization: Bearer {{authToken}}
+
+### List Records with Advanced Filtering (Date & Category)
+GET {{baseUrl}}/records?type=INCOME&category=Salary&startDate=2026-04-01T00:00:00Z&endDate=2026-04-30T00:00:00Z
+Authorization: Bearer {{authToken}}
+
+### Update a Record (Admin Only)
+# Note: Replace <RECORD_ID> with an ID from the GET /records response
+PUT {{baseUrl}}/records/<RECORD_ID>
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "amount": 5500,
+  "type": "INCOME",
+  "category": "Salary",
+  "date": "2026-04-01T10:00:00Z",
+  "notes": "Updated April Salary with Bonus"
+}
+
+### Delete a Record (Admin Only)
+# Note: Replace <RECORD_ID> with an ID from the GET /records response
+DELETE {{baseUrl}}/records/<RECORD_ID>
+Authorization: Bearer {{authToken}}
+
+### ----------------------------------------------------
+### 4. Dashboard Summaries
+### ----------------------------------------------------
+
+### Get Dashboard Statistics (Income, Expense, Net Balance, Recent Activity)
+GET {{baseUrl}}/dashboard/summary
+Authorization: Bearer {{authToken}}
+
+### Get Category-wise Breakdown
+GET {{baseUrl}}/dashboard/category-totals
+Authorization: Bearer {{authToken}}
+
+### Get Monthly Trends
+GET {{baseUrl}}/dashboard/monthly-trends
+Authorization: Bearer {{authToken}}
+
+### ----------------------------------------------------
+### 5. Validation & Error Handling Tests
+### ----------------------------------------------------
+
+### Test 1: Invalid Amount (Should return 400 Bad Request from Zod validation)
+POST {{baseUrl}}/records
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "amount": -500, 
+  "type": "INCOME",
+  "category": "Salary",
+  "date": "2026-04-01T10:00:00Z"
+}
+
+### Test 2: Missing Fields & Duplicate User (Should return 400)
+POST {{baseUrl}}/users
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "email": "admin@finance.com" 
+}
+
+### Test 3: Wrong/No Token (Should return 401 Unauthorized)
+GET {{baseUrl}}/records
+Authorization: Bearer invalid_token_here
+
+### ----------------------------------------------------
+### 6. Access Control Check (Validation)
+### ----------------------------------------------------
+# If you extract a token by creating a Viewer credential from the login endpoint, 
+# and then try to create a record, it should throw a 403 Forbidden error.
